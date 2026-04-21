@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hubpay CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #0B6E63; --primary-dk: #0A3D38; --primary-lt: rgba(11,110,99,.09);
+  --bg: #F4F1EB; --surface: #fff; --border: #E8E3DA; --border-lt: #F0EDE6;
+  --text: #1A1A1A; --t2: #6B7280; --t3: #9CA3AF;
+  --sidebar-w: 224px; --panel-w: 348px; --top-h: 58px;
+  --r: 10px; --r-sm: 6px;
+  --shadow: 0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 14px rgba(0,0,0,.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,.14);
+}
+html, body { height: 100%; font-family: 'DM Sans', system-ui, sans-serif; font-size: 13px; color: var(--text); background: var(--bg); overflow: hidden; }
+
+/* ── LAYOUT ─────────────────────────────── */
+#app { display: flex; height: 100vh; }
+
+/* ── SIDEBAR ─────────────────────────────── */
+#sidebar {
+  width: var(--sidebar-w); flex-shrink: 0;
+  background: linear-gradient(165deg, #09302C 0%, #0C7A6E 100%);
+  display: flex; flex-direction: column; overflow: hidden; z-index: 10;
+}
+.sb-logo {
+  padding: 20px 18px 16px; display: flex; align-items: center; gap: 11px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.sb-logo-icon {
+  width: 37px; height: 37px; border-radius: 10px;
+  background: rgba(255,255,255,.14); display: flex; align-items: center;
+  justify-content: center; font-family: 'DM Serif Display', serif;
+  font-size: 19px; color: #fff; flex-shrink: 0;
+}
+.sb-logo-name { font-family: 'DM Serif Display', serif; font-size: 18px; color: #fff; line-height: 1.1; }
+.sb-logo-sub { font-size: 9.5px; color: rgba(255,255,255,.4); letter-spacing: .9px; text-transform: uppercase; }
+.sb-nav { padding: 10px 10px 0; flex: 1; }
+.sb-section-label { font-size: 9px; color: rgba(255,255,255,.28); text-transform: uppercase; letter-spacing: 1.1px; font-weight: 700; padding: 12px 10px 5px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+  border-radius: var(--r-sm); color: rgba(255,255,255,.62); font-size: 12.5px;
+  font-weight: 500; cursor: pointer; transition: background .13s, color .13s;
+  user-select: none; margin-bottom: 2px;
+}
+.nav-item:hover { background: rgba(255,255,255,.09); color: rgba(255,255,255,.9); }
+.nav-item.active { background: rgba(255,255,255,.16); color: #fff; font-weight: 600; }
+.nav-item svg { flex-shrink: 0; }
+.sb-footer {
+  margin: 10px; border-radius: 8px;
+  background: rgba(0,0,0,.18); padding: 10px 13px;
+}
+.sb-stat-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; }
+.sb-stat-row span { font-size: 10.5px; color: rgba(255,255,255,.5); }
+.sb-stat-row strong { font-size: 11px; color: rgba(255,255,255,.85); font-weight: 600; }
+
+/* ── MAIN ─────────────────────────────────── */
+#main {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0;
+  transition: margin-right .22s ease;
+}
+#main.panel-open { margin-right: var(--panel-w); }
+
+/* ── TOPBAR ──────────────────────────────── */
+#topbar {
+  height: var(--top-h); flex-shrink: 0; background: var(--surface);
+  border-bottom: 1px solid var(--border); display: flex; align-items: center;
+  padding: 0 26px; gap: 10px; box-shadow: var(--shadow);
+}
+#page-title { font-size: 17px; font-weight: 700; flex: 1; }
+.search-wrap { position: relative; }
+.search-wrap svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--t3); pointer-events: none; }
+#search-input {
+  padding: 7px 11px 7px 30px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); font-family: inherit; font-size: 12px;
+  background: var(--bg); color: var(--text); outline: none; width: 210px;
+  transition: border-color .15s, box-shadow .15s;
+}
+#search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-lt); }
+#search-input::placeholder { color: var(--t3); }
+.f-select {
+  padding: 7px 9px; border-radius: var(--r-sm); border: 1px solid var(--border);
+  font-family: inherit; font-size: 12px; background: var(--surface); color: var(--text);
+  outline: none; cursor: pointer; transition: border-color .15s;
+}
+.f-select:focus { border-color: var(--primary); }
+.btn-clear { background: none; border: none; color: var(--primary); font-size: 11.5px; font-weight: 600; cursor: pointer; font-family: inherit; padding: 4px 2px; }
+.btn { padding: 8px 15px; border-radius: var(--r-sm); border: none; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .13s, box-shadow .13s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: #0A5D54; box-shadow: 0 2px 8px rgba(11,110,99,.3); }
+.btn-secondary { background: var(--bg); color: var(--t2); border: 1px solid var(--border); }
+.btn-secondary:hover { background: #EDE9E0; color: var(--text); }
+.btn-danger { background: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; }
+.btn-danger:hover { background: #FEE2E2; }
+.btn-sm { padding: 5px 10px; font-size: 11px; }
+.icon-btn {
+  width: 28px; height: 28px; border-radius: var(--r-sm); background: none;
+  border: 1px solid var(--border); color: var(--t2); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all .13s;
+}
+.icon-btn:hover { background: var(--bg); color: var(--text); }
+.icon-btn.danger { color: #EF4444; border-color: #FCA5A5; }
+.icon-btn.danger:hover { background: #FEF2F2; }
+
+/* ── CONTENT ─────────────────────────────── */
+#content { flex: 1; overflow-y: auto; padding: 22px 26px 32px; }
+
+/* ── KPI CARDS ────────────────────────────── */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+.kpi-card { background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); padding: 18px 20px; box-shadow: var(--shadow); }
+.kpi-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.kpi-val { font-size: 23px; font-weight: 700; line-height: 1; margin-bottom: 5px; }
+.kpi-label { font-size: 10.5px; color: var(--t2); text-transform: uppercase; letter-spacing: .65px; font-weight: 600; }
+
+/* ── SECTION CARD ─────────────────────────── */
+.card { background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.card-head { padding: 15px 20px; border-bottom: 1px solid var(--border-lt); display: flex; justify-content: space-between; align-items: center; }
+.card-title { font-size: 13px; font-weight: 700; }
+.card-body { padding: 16px 20px; }
+
+/* ── FUNNEL ───────────────────────────────── */
+.funnel-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+.funnel-lbl { width: 90px; font-size: 11px; font-weight: 600; color: var(--t2); text-align: right; flex-shrink: 0; }
+.funnel-track { flex: 1; background: var(--bg); border-radius: 5px; height: 26px; overflow: hidden; }
+.funnel-fill { height: 100%; border-radius: 5px; transition: width .45s cubic-bezier(.4,0,.2,1); display: flex; align-items: center; min-width: 0; }
+.funnel-fill span { font-size: 10.5px; font-weight: 700; color: #fff; padding: 0 9px; white-space: nowrap; }
+.funnel-meta { width: 60px; font-size: 10.5px; color: var(--t3); text-align: right; flex-shrink: 0; }
+
+/* ── ACTIVITY FEED ────────────────────────── */
+.act-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border-lt); cursor: pointer; }
+.act-item:last-child { border-bottom: none; }
+.act-item:hover .act-company { text-decoration: underline; }
+.act-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.act-company { font-weight: 600; font-size: 12px; }
+.act-text { font-size: 12px; color: var(--t2); line-height: 1.4; }
+.act-meta { font-size: 10.5px; color: var(--t3); margin-top: 2px; }
+
+/* ── PIPELINE BOARD ───────────────────────── */
+.board { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; align-items: flex-start; }
+.board::-webkit-scrollbar { height: 4px; }
+.col {
+  min-width: 208px; width: 208px; flex-shrink: 0; background: var(--surface);
+  border-radius: var(--r); border: 1.5px solid var(--border);
+  display: flex; flex-direction: column; transition: border-color .15s, background .15s;
+}
+.col.drag-over { border-color: var(--primary); background: var(--primary-lt); }
+.col-hd { padding: 11px 13px 9px; border-bottom: 1px solid var(--border-lt); }
+.col-hd-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+.col-hd-left { display: flex; align-items: center; gap: 7px; }
+.stage-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.col-name { font-size: 12px; font-weight: 700; }
+.col-cnt { font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 4px; }
+.col-val { font-size: 10.5px; color: var(--t3); }
+.col-body { padding: 7px; flex: 1; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; max-height: calc(100vh - 230px); min-height: 50px; }
+.col-body::-webkit-scrollbar { width: 3px; }
+.col-empty { font-size: 11.5px; color: var(--t3); text-align: center; padding: 26px 8px; font-weight: 500; }
+.col-empty.hint { color: var(--primary); }
+
+/* ── KANBAN CARD ──────────────────────────── */
+.kcard {
+  background: #FAFAF8; border: 1px solid #EEEBE4; border-radius: 8px;
+  padding: 11px 12px; cursor: grab; user-select: none;
+  transition: box-shadow .13s, transform .13s, border-color .13s;
+}
+.kcard:hover { box-shadow: 0 2px 10px rgba(0,0,0,.09); transform: translateY(-1px); border-color: var(--border); }
+.kcard:active { cursor: grabbing; }
+.kcard.sel { border-color: var(--primary); background: #EEF6F5; }
+.kcard-co { font-size: 12.5px; font-weight: 600; margin-bottom: 2px; line-height: 1.3; }
+.kcard-ct { font-size: 11px; color: var(--t3); margin-bottom: 8px; }
+.kcard-ft { display: flex; justify-content: space-between; align-items: center; }
+.kcard-val { font-size: 11px; font-weight: 700; color: var(--primary); }
+.kcard-prod { font-size: 9.5px; color: var(--t3); background: var(--bg); padding: 2px 6px; border-radius: 3px; max-width: 108px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── LEADS TABLE ──────────────────────────── */
+.tbl-wrap { background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow); }
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th {
+  text-align: left; padding: 10px 13px; font-size: 10.5px;
+  text-transform: uppercase; letter-spacing: .6px; color: var(--t3);
+  font-weight: 700; background: #FAFAF8; border-bottom: 1.5px solid var(--border);
+  cursor: pointer; user-select: none; white-space: nowrap;
+}
+.tbl th:hover { color: var(--t2); }
+.tbl td { padding: 11px 13px; border-bottom: 1px solid var(--border-lt); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tbody tr { cursor: pointer; transition: background .1s; }
+.tbl tbody tr:hover { background: #FAFAF8; }
+.tbl tbody tr.sel { background: #EEF6F5; }
+.td-co { font-weight: 600; font-size: 12.5px; }
+.td-ct { font-size: 12px; color: var(--t2); }
+.td-val { font-weight: 700; color: var(--primary); font-size: 12px; }
+.td-dt { font-size: 11.5px; color: var(--t3); }
+.row-acts { display: flex; gap: 4px; opacity: 0; transition: opacity .13s; }
+.tbl tbody tr:hover .row-acts, .tbl tbody tr.sel .row-acts { opacity: 1; }
+
+/* ── BADGE ────────────────────────────────── */
+.badge { display: inline-flex; align-items: center; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 4px; letter-spacing: .15px; white-space: nowrap; }
+
+/* ── ANALYTICS ────────────────────────────── */
+.a-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+
+/* ── DETAIL PANEL ─────────────────────────── */
+#panel {
+  width: var(--panel-w); flex-shrink: 0; position: fixed; right: 0; top: 0; bottom: 0;
+  background: var(--surface); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow-y: auto;
+  transform: translateX(var(--panel-w)); transition: transform .22s ease;
+  z-index: 8; box-shadow: -4px 0 24px rgba(0,0,0,.07);
+}
+#panel.open { transform: translateX(0); }
+.p-hd { padding: 18px 20px 14px; border-bottom: 1px solid var(--border-lt); position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.p-co { font-size: 16px; font-weight: 700; margin-bottom: 3px; line-height: 1.25; }
+.p-sub { font-size: 11.5px; color: var(--t2); margin-bottom: 10px; }
+.p-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+.p-body { padding: 16px 20px; flex: 1; }
+.p-sec { margin-bottom: 17px; }
+.p-lbl { font-size: 9.5px; text-transform: uppercase; letter-spacing: .85px; color: var(--t3); font-weight: 700; margin-bottom: 5px; }
+.p-val { font-size: 12.5px; }
+.p-val a { color: var(--primary); text-decoration: none; }
+.p-val a:hover { text-decoration: underline; }
+.p-g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 17px; }
+.p-notes { font-size: 12px; color: var(--t2); line-height: 1.6; background: var(--bg); padding: 10px 13px; border-radius: var(--r-sm); }
+.stage-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+.stage-btn { font-size: 10px; padding: 3px 8px; border-radius: 4px; border: 1px solid; background: var(--surface); cursor: pointer; font-family: inherit; font-weight: 600; transition: transform .13s, box-shadow .13s; }
+.stage-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 7px rgba(0,0,0,.1); }
+.act-form { display: flex; gap: 5px; margin-bottom: 13px; }
+.act-type { width: 78px; flex-shrink: 0; }
+.act-txt { flex: 1; }
+.act-add { background: var(--primary); color: #fff; border: none; border-radius: var(--r-sm); padding: 0 12px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 700; flex-shrink: 0; height: 34px; transition: background .13s; }
+.act-add:hover { background: #0A5D54; }
+.timeline { display: flex; flex-direction: column; }
+.tl-item { display: flex; gap: 10px; padding: 7px 0; border-top: 1px solid var(--border-lt); }
+.tl-item:first-child { border-top: none; padding-top: 0; }
+.tl-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.tl-text { font-size: 12px; color: var(--text); line-height: 1.45; }
+.tl-meta { font-size: 10px; color: var(--t3); margin-top: 2px; }
+.p-ft { padding: 14px 20px; border-top: 1px solid var(--border-lt); display: flex; gap: 8px; flex-shrink: 0; }
+
+/* ── MODAL ────────────────────────────────── */
+#modal-ov {
+  position: fixed; inset: 0; background: rgba(0,0,0,.42);
+  display: flex; align-items: center; justify-content: center; z-index: 100;
+  opacity: 0; pointer-events: none; transition: opacity .18s;
+}
+#modal-ov.open { opacity: 1; pointer-events: all; }
+#modal {
+  background: var(--surface); border-radius: 13px; width: 530px;
+  max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg);
+  transform: translateY(10px); transition: transform .18s;
+}
+#modal-ov.open #modal { transform: translateY(0); }
+.m-hd { padding: 22px 24px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-lt); }
+.m-title { font-size: 16px; font-weight: 700; }
+.m-close { background: none; border: none; font-size: 23px; cursor: pointer; color: var(--t3); line-height: 1; transition: color .13s; }
+.m-close:hover { color: var(--text); }
+.m-body { padding: 20px 24px; }
+.m-ft { padding: 13px 24px 20px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border-lt); }
+
+/* ── FORM ─────────────────────────────────── */
+.fg { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.ff { grid-column: 1 / -1; }
+.fl { display: flex; flex-direction: column; gap: 5px; }
+.flbl { font-size: 10px; text-transform: uppercase; letter-spacing: .7px; color: var(--t3); font-weight: 700; }
+.fi, .fs, .fta {
+  padding: 8px 10px; border-radius: var(--r-sm); border: 1px solid var(--border);
+  font-family: inherit; font-size: 12.5px; color: var(--text); background: var(--surface);
+  outline: none; width: 100%; transition: border-color .15s, box-shadow .15s;
+}
+.fi:focus, .fs:focus, .fta:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-lt); }
+.fta { resize: vertical; min-height: 72px; }
+
+/* ── CONFIRM ──────────────────────────────── */
+#cfm-ov {
+  position: fixed; inset: 0; background: rgba(0,0,0,.42);
+  display: flex; align-items: center; justify-content: center; z-index: 200;
+  opacity: 0; pointer-events: none; transition: opacity .15s;
+}
+#cfm-ov.open { opacity: 1; pointer-events: all; }
+#cfm {
+  background: var(--surface); border-radius: 11px; padding: 26px 28px;
+  width: 360px; box-shadow: var(--shadow-lg);
+  transform: scale(.96); transition: transform .15s;
+}
+#cfm-ov.open #cfm { transform: scale(1); }
+#cfm-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+#cfm-msg { font-size: 13px; color: var(--t2); line-height: 1.5; margin-bottom: 22px; }
+.cfm-btns { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* ── EMPTY STATE ──────────────────────────── */
+.empty { text-align: center; padding: 56px 20px; }
+.empty svg { opacity: .25; margin-bottom: 14px; }
+.empty-title { font-size: 14px; font-weight: 600; color: var(--t2); margin-bottom: 5px; }
+.empty-sub { font-size: 12px; color: var(--t3); }
+
+/* ── SCROLLBARS ───────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D5D0C8; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #bbb; }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-icon">H</div>
+      <div>
+        <div class="sb-logo-name">Hubpay</div>
+        <div class="sb-logo-sub">CRM</div>
+      </div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-section-label">Navigation</div>
+      <div class="nav-item active" data-view="dashboard">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" data-view="pipeline">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="4" height="18" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="5" width="4" height="16" rx="1"/></svg>
+        Pipeline
+      </div>
+      <div class="nav-item" data-view="leads">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg>
+        Leads
+      </div>
+      <div class="nav-item" data-view="analytics">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+        Analytics
+      </div>
+    </nav>
+    <div class="sb-footer" id="sb-footer"></div>
+  </aside>
+
+  <!-- MAIN -->
+  <main id="main">
+    <header id="topbar">
+      <span id="page-title">Dashboard</span>
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="search-input" placeholder="Search leads…" autocomplete="off" spellcheck="false">
+      </div>
+      <select id="filter-stage" class="f-select">
+        <option value="All">All Stages</option>
+      </select>
+      <select id="filter-product" class="f-select">
+        <option value="All">All Products</option>
+      </select>
+      <button id="btn-clear" class="btn-clear" style="display:none">Clear</button>
+      <button id="btn-new" class="btn btn-primary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Lead
+      </button>
+    </header>
+    <div id="content"></div>
+  </main>
+
+  <!-- DETAIL PANEL -->
+  <aside id="panel"></aside>
+</div>
+
+<!-- MODAL -->
+<div id="modal-ov"><div id="modal"></div></div>
+
+<!-- CONFIRM -->
+<div id="cfm-ov">
+  <div id="cfm">
+    <div id="cfm-title">Delete Lead</div>
+    <div id="cfm-msg"></div>
+    <div class="cfm-btns">
+      <button class="btn btn-secondary" id="cfm-no">Cancel</button>
+      <button class="btn btn-danger" id="cfm-yes">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ════════════════════════════════════════════
+// CONSTANTS
+// ════════════════════════════════════════════
+const STAGES = ['New Lead','Contacted','Qualified','Proposal','Negotiation','Won','Lost'];
+const SC = { 'New Lead':'#6366F1','Contacted':'#0EA5E9','Qualified':'#F59E0B','Proposal':'#8B5CF6','Negotiation':'#EC4899','Won':'#10B981','Lost':'#94A3B8' };
+const PRODUCTS = ['Multi-Currency Accounts','Corporate FX','Cross-Border Payroll','Payment Links','Africa Collect & Remit','Retail Remittances'];
+const SOURCES  = ['Referral','Website','LinkedIn','Conference','Cold Outreach','Partner'];
+const SIZES    = ['1-10','11-50','51-200','201-500','500+'];
+const ATYPES   = ['Note','Call','Email','Meeting','Follow-up'];
+const AC = { Note:'#94A3B8',Call:'#0EA5E9',Email:'#8B5CF6',Meeting:'#F59E0B','Follow-up':'#EC4899','Stage Change':'#F59E0B' };
+
+const SEED = [
+  {id:1,company:'Meridian Trading LLC',contact:'Ahmed Al-Rashid',email:'ahmed@meridiantrading.ae',phone:'+971 50 123 4567',stage:'Negotiation',value:48000,product:'Corporate FX',source:'Referral',industry:'Commodities Trading',size:'51-200',notes:'Importing soft commodities from East Africa. Needs competitive FX rates for USD/KES and USD/TZS corridors. Decision expected by end of month.',created:'2026-03-18',lastActivity:'2026-04-12',activities:[{date:'2026-04-12',type:'Call',text:'Discussed pricing tiers. They want volume-based discounts.'},{date:'2026-04-02',type:'Email',text:'Sent proposal with FX rate comparison vs their current bank.'},{date:'2026-03-22',type:'Meeting',text:'Initial meeting at their DAFZA office. Strong interest.'}]},
+  {id:2,company:'NovaTech Solutions',contact:'Sarah Mensah',email:'sarah.m@novatech.io',phone:'+971 4 555 8901',stage:'Qualified',value:32000,product:'Cross-Border Payroll',source:'LinkedIn',industry:'Technology',size:'51-200',notes:'Software company with developers in Pakistan, Egypt, and Nigeria. Currently using wire transfers for payroll — expensive and slow.',created:'2026-03-25',lastActivity:'2026-04-10',activities:[{date:'2026-04-10',type:'Call',text:'Confirmed pain points: $45 per wire, 3-5 day delays. Demo scheduled.'},{date:'2026-03-28',type:'Email',text:'Sent product overview and case studies.'}]},
+  {id:3,company:'Atlas Freight & Logistics',contact:'Rajesh Kapoor',email:'rajesh@atlasfreight.com',phone:'+971 50 987 6543',stage:'Proposal',value:85000,product:'Africa Collect & Remit',source:'Conference',industry:'Logistics',size:'201-500',notes:'Major freight forwarder with routes across East and West Africa. Needs to collect payments in local African currencies and settle in AED. 200+ invoices/month.',created:'2026-02-15',lastActivity:'2026-04-08',activities:[{date:'2026-04-08',type:'Email',text:'Sent revised proposal with tiered pricing for volume above 150 transactions/month.'},{date:'2026-03-20',type:'Meeting',text:'On-site demo with their finance team. CFO was present and engaged.'},{date:'2026-03-01',type:'Call',text:'Initial discovery call. Met at GITEX Africa booth.'}]},
+  {id:4,company:'Pearl Boutique Hotels',contact:'Layla Hassan',email:'layla@pearlhotels.ae',phone:'+971 55 234 5678',stage:'Contacted',value:15000,product:'Payment Links',source:'Website',industry:'Hospitality',size:'11-50',notes:'Boutique hotel chain (3 properties). Wants payment links for guest deposits.',created:'2026-04-05',lastActivity:'2026-04-11',activities:[{date:'2026-04-11',type:'Email',text:'Sent intro email with payment links product sheet.'},{date:'2026-04-05',type:'Note',text:'Inbound from website contact form.'}]},
+  {id:5,company:'Zanzibar Spice Exports',contact:'Omar Juma',email:'omar@zanzispice.co.tz',phone:'+255 77 123 4567',stage:'New Lead',value:22000,product:'Africa Collect & Remit',source:'Partner',industry:'Agriculture',size:'11-50',notes:'Spice exporter in Tanzania, selling to UAE wholesalers. Referred by Atlas Freight.',created:'2026-04-13',lastActivity:'2026-04-13',activities:[{date:'2026-04-13',type:'Note',text:'Referral from Rajesh at Atlas Freight. Warm lead.'}]},
+  {id:6,company:'Gulf Digital Agency',contact:'Fatima Al-Zahra',email:'fatima@gulfdigital.ae',phone:'+971 52 345 6789',stage:'Won',value:18000,product:'Multi-Currency Accounts',source:'Cold Outreach',industry:'Marketing',size:'11-50',notes:'Digital agency paying freelancers in 8 countries. Onboarding completed.',created:'2026-01-20',lastActivity:'2026-03-15',activities:[{date:'2026-03-15',type:'Note',text:'Onboarding complete. First batch of payments processed.'},{date:'2026-02-28',type:'Meeting',text:'Contract signed.'}]},
+  {id:7,company:'Karachi Textiles Group',contact:'Bilal Siddiqui',email:'bilal@karachitextiles.pk',phone:'+92 321 456 7890',stage:'Qualified',value:55000,product:'Corporate FX',source:'Referral',industry:'Textiles',size:'201-500',notes:'Major textile manufacturer exporting to UAE. Losing on FX spreads with their bank.',created:'2026-03-10',lastActivity:'2026-04-09',activities:[{date:'2026-04-09',type:'Call',text:'Deep dive on FX costs. Spending ~$12k/year on spreads alone.'},{date:'2026-03-15',type:'Email',text:'Sent comparison sheet: Hubpay rates vs HBL and UBL.'}]},
+  {id:8,company:'Sahara Construction',contact:'Mohammed Diallo',email:'m.diallo@saharaconst.com',phone:'+971 56 789 0123',stage:'Lost',value:40000,product:'Cross-Border Payroll',source:'Conference',industry:'Construction',size:'500+',notes:'Went with RAKBANK payroll solution. Keep warm for future.',created:'2026-01-05',lastActivity:'2026-03-01',activities:[{date:'2026-03-01',type:'Note',text:'Lost to RAKBANK. They prioritized existing banking relationship.'}]},
+  {id:9,company:'EcoFarms East Africa',contact:'Grace Ochieng',email:'grace@ecofarms.co.ke',phone:'+254 722 345 678',stage:'Contacted',value:28000,product:'Africa Collect & Remit',source:'Partner',industry:'Agriculture',size:'51-200',notes:'Organic produce exporter to Gulf markets. Comparing us with Flutterwave.',created:'2026-04-01',lastActivity:'2026-04-14',activities:[{date:'2026-04-14',type:'Call',text:'Intro call went well. Comparing us with Flutterwave for the UAE corridor.'}]},
+  {id:10,company:'Luxe Auto Parts DMCC',contact:'Viktor Petrov',email:'viktor@luxeauto.ae',phone:'+971 4 888 9999',stage:'New Lead',value:35000,product:'Multi-Currency Accounts',source:'Website',industry:'Automotive',size:'11-50',notes:'Auto parts distributor sourcing from Japan, Germany, China. Needs JPY, EUR, CNY.',created:'2026-04-14',lastActivity:'2026-04-14',activities:[{date:'2026-04-14',type:'Note',text:'Website form submission. Requested callback.'}]},
+];
+
+// ════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════
+const today = () => new Date().toISOString().slice(0,10);
+const fmt   = n => n >= 1000 ? `$${(n/1000).toFixed(0)}k` : `$${n}`;
+const fmtF  = n => `$${Number(n).toLocaleString()}`;
+const esc   = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const $     = id => document.getElementById(id);
+const badge = (txt,clr) => `<span class="badge" style="color:${clr};background:${clr}1A">${esc(txt)}</span>`;
+
+// ════════════════════════════════════════════
+// STORE  (localStorage)
+// ════════════════════════════════════════════
+const Store = {
+  leads: [], _nid: 20,
+  load() {
+    try {
+      const raw = localStorage.getItem('hp_crm_v3');
+      if (raw) { const d = JSON.parse(raw); this.leads = d.leads||[]; this._nid = d.nid||20; }
+      else { this.leads = SEED.map(l=>({...l})); this._nid = 20; this._save(); }
+    } catch { this.leads = SEED.map(l=>({...l})); this._nid = 20; }
+  },
+  _save() {
+    try { localStorage.setItem('hp_crm_v3', JSON.stringify({leads:this.leads,nid:this._nid})); } catch {}
+  },
+  add(d) {
+    const l = {...d, id:this._nid++, value:Number(d.value)||0,
+      created:today(), lastActivity:today(),
+      activities:[{date:today(),type:'Note',text:'Lead created.'}]};
+    this.leads.unshift(l); this._save(); return l;
+  },
+  update(d) {
+    const l = {...d, value:Number(d.value)||0};
+    this.leads = this.leads.map(x => x.id===l.id ? l : x);
+    this._save(); return l;
+  },
+  del(id) { this.leads = this.leads.filter(l=>l.id!==id); this._save(); },
+  move(id, stage) {
+    const d=today(), a={date:d,type:'Stage Change',text:`Moved to ${stage}.`};
+    this.leads = this.leads.map(l => l.id===id ? {...l,stage,lastActivity:d,activities:[a,...l.activities]} : l);
+    this._save(); return this.find(id);
+  },
+  addAct(id, type, text) {
+    const a={date:today(),type,text};
+    this.leads = this.leads.map(l => l.id===id ? {...l,lastActivity:today(),activities:[a,...l.activities]} : l);
+    this._save(); return this.find(id);
+  },
+  find(id) { return this.leads.find(l=>l.id===id); }
+};
+
+// ════════════════════════════════════════════
+// APP STATE
+// ════════════════════════════════════════════
+const App = {
+  view: 'dashboard', selId: null, dragId: null,
+  get sel() { return this.selId ? Store.find(this.selId) : null; },
+  get filters() {
+    return {
+      q: ($('search-input')?.value||'').trim().toLowerCase(),
+      stage: $('filter-stage')?.value||'All',
+      product: $('filter-product')?.value||'All',
+    };
+  },
+  get filtered() {
+    const {q,stage,product} = this.filters;
+    return Store.leads.filter(l => {
+      if (stage!=='All' && l.stage!==stage) return false;
+      if (product!=='All' && l.product!==product) return false;
+      if (q && !l.company.toLowerCase().includes(q) && !l.contact.toLowerCase().includes(q) && !(l.email||'').toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }
+};
+
+// ════════════════════════════════════════════
+// PANEL
+// ════════════════════════════════════════════
+function renderPanel() {
+  const panel = $('panel'), main = $('main');
+  const l = App.sel;
+  if (!l) { panel.classList.remove('open'); main.classList.remove('panel-open'); panel.innerHTML=''; return; }
+  panel.classList.add('open'); main.classList.add('panel-open');
+
+  const stageBtns = STAGES.filter(s=>s!==l.stage)
+    .map(s=>`<button class="stage-btn" style="color:${SC[s]};border-color:${SC[s]}44" data-move="${esc(s)}">${esc(s)}</button>`).join('');
+
+  const tl = l.activities.length
+    ? l.activities.map(a=>`
+        <div class="tl-item">
+          <div class="tl-dot" style="background:${AC[a.type]||'#94A3B8'}"></div>
+          <div><div class="tl-text">${esc(a.text)}</div><div class="tl-meta">${esc(a.type)} · ${esc(a.date)}</div></div>
+        </div>`).join('')
+    : '<div style="font-size:12px;color:var(--t3);padding:12px 0;text-align:center">No activity yet</div>';
+
+  panel.innerHTML = `
+    <div class="p-hd">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1;min-width:0;padding-right:8px">
+          <div class="p-co">${esc(l.company)}</div>
+          <div class="p-sub">${esc(l.industry||'—')} · ${esc(l.size)} emp</div>
+        </div>
+        <button class="icon-btn" data-panel-close title="Close (Esc)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="p-badges">
+        ${badge(l.stage,SC[l.stage])}
+        <span class="badge" style="color:var(--primary);background:var(--primary-lt)">${esc(fmtF(l.value))}</span>
+        <span class="badge" style="color:var(--t2);background:var(--bg)">${esc(l.product)}</span>
+      </div>
+    </div>
+    <div class="p-body">
+      <div class="p-sec">
+        <div class="p-lbl">Contact</div>
+        <div class="p-val" style="font-weight:600;margin-bottom:2px">${esc(l.contact||'—')}</div>
+        ${l.email?`<div class="p-val"><a href="mailto:${esc(l.email)}">${esc(l.email)}</a></div>`:''}
+        ${l.phone?`<div class="p-val" style="color:var(--t2);font-size:12px">${esc(l.phone)}</div>`:''}
+      </div>
+      <div class="p-g2">
+        <div><div class="p-lbl">Source</div><div class="p-val">${esc(l.source)}</div></div>
+        <div><div class="p-lbl">Created</div><div class="p-val">${esc(l.created)}</div></div>
+      </div>
+      ${l.notes?`<div class="p-sec"><div class="p-lbl">Notes</div><div class="p-notes">${esc(l.notes)}</div></div>`:''}
+      <div class="p-sec">
+        <div class="p-lbl">Move to Stage</div>
+        <div class="stage-btns">${stageBtns}</div>
+      </div>
+      <div class="p-sec">
+        <div class="p-lbl">Log Activity</div>
+        <div class="act-form">
+          <select id="act-type" class="fs act-type">${ATYPES.map(t=>`<option>${esc(t)}</option>`).join('')}</select>
+          <input id="act-txt" class="fi act-txt" placeholder="What happened?" autocomplete="off">
+          <button class="act-add" data-add-act>+</button>
+        </div>
+      </div>
+      <div class="p-sec">
+        <div class="p-lbl">History (${l.activities.length})</div>
+        <div class="timeline">${tl}</div>
+      </div>
+    </div>
+    <div class="p-ft">
+      <button class="btn btn-primary" style="flex:1" data-panel-edit>Edit Lead</button>
+      <button class="btn btn-danger" data-panel-del>Delete</button>
+    </div>
+  `;
+}
+
+// ════════════════════════════════════════════
+// VIEWS
+// ════════════════════════════════════════════
+function renderDashboard() {
+  const ls = Store.leads;
+  const active = ls.filter(l=>!['Won','Lost'].includes(l.stage));
+  const won    = ls.filter(l=>l.stage==='Won');
+  const closed = ls.filter(l=>['Won','Lost'].includes(l.stage));
+  const wr     = closed.length ? Math.round(won.length/closed.length*100) : null;
+  const pv     = active.reduce((s,l)=>s+l.value,0);
+  const wv     = won.reduce((s,l)=>s+l.value,0);
+
+  const kpis = [
+    {icon:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>`,bg:'#EEF2FF',v:active.length,lbl:'Active Leads'},
+    {icon:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0B6E63" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,bg:'#ECFDF5',v:fmtF(pv),lbl:'Pipeline Value'},
+    {icon:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,bg:'#ECFDF5',v:fmtF(wv),lbl:'Won Value'},
+    {icon:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`,bg:'#FFFBEB',v:wr!==null?`${wr}%`:'—',lbl:'Win Rate'},
+  ];
+  const kpiHtml = kpis.map(k=>`
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:${k.bg}">${k.icon}</div>
+      <div class="kpi-val">${k.v}</div>
+      <div class="kpi-label">${k.lbl}</div>
+    </div>`).join('');
+
+  const mx = Math.max(...STAGES.map(s=>ls.filter(l=>l.stage===s).length),1);
+  const funnel = STAGES.map(s=>{
+    const c=ls.filter(l=>l.stage===s).length;
+    const v=ls.filter(l=>l.stage===s).reduce((a,l)=>a+l.value,0);
+    const p=Math.round(c/mx*100);
+    return `<div class="funnel-row">
+      <div class="funnel-lbl">${esc(s)}</div>
+      <div class="funnel-track"><div class="funnel-fill" style="width:${p}%;background:${SC[s]}">
+        ${c>0?`<span>${c}</span>`:''}
+      </div></div>
+      <div class="funnel-meta">${v>0?fmt(v):''}</div>
+    </div>`;
+  }).join('');
+
+  const recentActs = ls.flatMap(l=>l.activities.map(a=>({...a,cid:l.id,co:l.company})))
+    .sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
+  const actFeed = recentActs.length
+    ? recentActs.map(a=>`
+        <div class="act-item" data-goto="${a.cid}">
+          <div class="act-dot" style="background:${AC[a.type]||'#94A3B8'}"></div>
+          <div>
+            <div class="act-company">${esc(a.co)}</div>
+            <div class="act-text">${esc(a.text)}</div>
+            <div class="act-meta">${esc(a.type)} · ${esc(a.date)}</div>
+          </div>
+        </div>`).join('')
+    : '<div style="font-size:12px;color:var(--t3);text-align:center;padding:20px 0">No activity yet</div>';
+
+  $('content').innerHTML = `
+    <div class="kpi-row">${kpiHtml}</div>
+    <div style="display:grid;grid-template-columns:3fr 2fr;gap:16px">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Pipeline Funnel</span></div>
+        <div class="card-body">${funnel}</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Recent Activity</span></div>
+        <div class="card-body" style="padding:10px 20px">${actFeed}</div>
+      </div>
+    </div>`;
+}
+
+function renderPipeline() {
+  const fl = App.filtered;
+  const cols = STAGES.map(stage=>{
+    const cards = fl.filter(l=>l.stage===stage);
+    const sv = cards.reduce((s,l)=>s+l.value,0);
+    const cardHtml = cards.map(l=>`
+      <div class="kcard ${App.selId===l.id?'sel':''}" draggable="true" data-id="${l.id}">
+        <div class="kcard-co">${esc(l.company)}</div>
+        <div class="kcard-ct">${esc(l.contact)}</div>
+        <div class="kcard-ft">
+          <span class="kcard-val">${fmt(l.value)}</span>
+          <span class="kcard-prod" title="${esc(l.product)}">${esc(l.product)}</span>
+        </div>
+      </div>`).join('');
+    return `
+      <div class="col" data-col="${esc(stage)}">
+        <div class="col-hd">
+          <div class="col-hd-top">
+            <div class="col-hd-left">
+              <div class="stage-dot" style="background:${SC[stage]}"></div>
+              <span class="col-name">${esc(stage)}</span>
+            </div>
+            <span class="col-cnt" style="color:${SC[stage]};background:${SC[stage]}1A">${cards.length}</span>
+          </div>
+          ${sv>0?`<div class="col-val">${fmtF(sv)}</div>`:''}
+        </div>
+        <div class="col-body">
+          ${cardHtml}
+          ${cards.length===0?`<div class="col-empty" data-hint="${esc(stage)}">Drop here</div>`:''}
+        </div>
+      </div>`;
+  }).join('');
+  $('content').innerHTML = `<div class="board">${cols}</div>`;
+  initDrag();
+}
+
+function renderLeads() {
+  const fl = App.filtered;
+  if (!fl.length) {
+    $('content').innerHTML = `<div class="tbl-wrap"><div class="empty">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <div class="empty-title">No leads found</div>
+      <div class="empty-sub">Try adjusting your search or filters</div>
+    </div></div>`; return;
+  }
+  const rows = fl.map(l=>`
+    <tr class="${App.selId===l.id?'sel':''}" data-id="${l.id}">
+      <td class="td-co" style="padding-left:16px">${esc(l.company)}</td>
+      <td class="td-ct">${esc(l.contact)}</td>
+      <td>${badge(l.stage,SC[l.stage])}</td>
+      <td style="font-size:12px;color:var(--t2)">${esc(l.product)}</td>
+      <td class="td-val">${fmtF(l.value)}</td>
+      <td style="font-size:12px;color:var(--t2)">${esc(l.source)}</td>
+      <td class="td-dt">${esc(l.lastActivity)}</td>
+      <td><div class="row-acts">
+        <button class="icon-btn" data-action="edit" data-id="${l.id}" title="Edit">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn danger" data-action="delete" data-id="${l.id}" title="Delete">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        </button>
+      </div></td>
+    </tr>`).join('');
+  $('content').innerHTML = `
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr>${['Company','Contact','Stage','Product','Value','Source','Last Activity',''].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function renderAnalytics() {
+  const ls = Store.leads, total = ls.length;
+  const mx = Math.max(...STAGES.map(s=>ls.filter(l=>l.stage===s).length),1);
+
+  const funnel = STAGES.map(s=>{
+    const c=ls.filter(l=>l.stage===s).length;
+    const v=ls.filter(l=>l.stage===s).reduce((a,l)=>a+l.value,0);
+    const p=Math.round(c/mx*100);
+    return `<div class="funnel-row">
+      <div class="funnel-lbl">${esc(s)}</div>
+      <div class="funnel-track"><div class="funnel-fill" style="width:${p}%;background:${SC[s]}">
+        ${c>0?`<span>${c} leads</span>`:''}
+      </div></div>
+      <div class="funnel-meta">${fmtF(v)}</div>
+    </div>`;
+  }).join('');
+
+  const prodRows = PRODUCTS.map(p=>{
+    const c=ls.filter(l=>l.product===p).length;
+    const v=ls.filter(l=>l.product===p).reduce((a,l)=>a+l.value,0);
+    const pct=total?Math.round(c/total*100):0;
+    if(!c) return '';
+    return `<div style="padding:9px 0;border-bottom:1px solid var(--border-lt)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:12.5px;font-weight:500">${esc(p)}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--primary)">${fmtF(v)}</span>
+      </div>
+      <div style="background:var(--bg);border-radius:4px;height:5px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:var(--primary);opacity:.65;border-radius:4px"></div>
+      </div>
+      <div style="font-size:10.5px;color:var(--t3);margin-top:3px">${c} lead${c!==1?'s':''} · ${pct}%</div>
+    </div>`;
+  }).join('');
+
+  const srcRows = SOURCES.map(s=>{
+    const c=ls.filter(l=>l.source===s).length;
+    const v=ls.filter(l=>l.source===s).reduce((a,l)=>a+l.value,0);
+    if(!c) return '';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border-lt)">
+      <span style="font-size:12.5px">${esc(s)}</span>
+      <div style="text-align:right">
+        <div style="font-size:12px;font-weight:700">${c} lead${c!==1?'s':''}</div>
+        <div style="font-size:10.5px;color:var(--t3)">${fmtF(v)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  $('content').innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head"><span class="card-title">Pipeline by Stage</span></div>
+      <div class="card-body">${funnel}</div>
+    </div>
+    <div class="a-grid2">
+      <div class="card">
+        <div class="card-head"><span class="card-title">By Product</span></div>
+        <div class="card-body">${prodRows||'<div style="color:var(--t3);font-size:12px">No data</div>'}</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">By Source</span></div>
+        <div class="card-body">${srcRows||'<div style="color:var(--t3);font-size:12px">No data</div>'}</div>
+      </div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════
+// MODAL
+// ════════════════════════════════════════════
+function formHtml(d={}) {
+  const v=(f,fb='')=>esc(d[f]!=null?d[f]:fb);
+  const sel=(opts,f)=>opts.map(o=>`<option${d[f]===o?' selected':''}>${esc(o)}</option>`).join('');
+  return `<div class="fg">
+    <div class="fl ff"><label class="flbl">Company *</label><input class="fi" name="company" value="${v('company')}" required autocomplete="off"></div>
+    <div class="fl"><label class="flbl">Contact Name</label><input class="fi" name="contact" value="${v('contact')}" autocomplete="off"></div>
+    <div class="fl"><label class="flbl">Email</label><input class="fi" name="email" type="email" value="${v('email')}" autocomplete="off"></div>
+    <div class="fl"><label class="flbl">Phone</label><input class="fi" name="phone" value="${v('phone')}" autocomplete="off"></div>
+    <div class="fl"><label class="flbl">Value ($)</label><input class="fi" name="value" type="number" min="0" value="${v('value','')}" autocomplete="off"></div>
+    <div class="fl"><label class="flbl">Stage</label><select class="fs" name="stage">${sel(STAGES,'stage')}</select></div>
+    <div class="fl"><label class="flbl">Product</label><select class="fs" name="product">${sel(PRODUCTS,'product')}</select></div>
+    <div class="fl"><label class="flbl">Source</label><select class="fs" name="source">${sel(SOURCES,'source')}</select></div>
+    <div class="fl"><label class="flbl">Industry</label><input class="fi" name="industry" value="${v('industry')}" autocomplete="off"></div>
+    <div class="fl"><label class="flbl">Company Size</label><select class="fs" name="size">${sel(SIZES,'size')}</select></div>
+    <div class="fl ff"><label class="flbl">Notes</label><textarea class="fta" name="notes">${v('notes')}</textarea></div>
+  </div>`;
+}
+
+function openModal(title, data, onSave) {
+  const ov=$('modal-ov'), m=$('modal');
+  const isEdit = title.startsWith('Edit');
+  m.innerHTML = `
+    <div class="m-hd">
+      <span class="m-title">${esc(title)}</span>
+      <button class="m-close" data-close-modal>&times;</button>
+    </div>
+    <form id="mform" autocomplete="off">
+      <div class="m-body">${formHtml(data)}</div>
+      <div class="m-ft">
+        <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary">${isEdit?'Save Changes':'Create Lead'}</button>
+      </div>
+    </form>`;
+  ov.classList.add('open');
+  m.querySelector('[name="company"]').focus();
+
+  const close=()=>ov.classList.remove('open');
+  m.querySelectorAll('[data-close-modal]').forEach(b=>b.addEventListener('click',close));
+  ov.addEventListener('click',e=>{if(e.target===ov)close();},{once:true});
+  $('mform').addEventListener('submit',e=>{
+    e.preventDefault();
+    const fd=new FormData(e.target), obj={};
+    for(const [k,v] of fd.entries()) obj[k]=v;
+    if(!obj.company?.trim()) return;
+    onSave(obj); close();
+  });
+}
+
+// ════════════════════════════════════════════
+// CONFIRM
+// ════════════════════════════════════════════
+function showConfirm(msg, onYes) {
+  const ov=$('cfm-ov');
+  $('cfm-msg').textContent=msg;
+  ov.classList.add('open');
+  const close=()=>ov.classList.remove('open');
+  $('cfm-no').onclick=close;
+  $('cfm-yes').onclick=()=>{close();onYes();};
+  ov.onclick=e=>{if(e.target===ov)close();};
+}
+
+// ════════════════════════════════════════════
+// DRAG & DROP
+// ════════════════════════════════════════════
+function initDrag() {
+  document.querySelectorAll('.kcard').forEach(card=>{
+    card.addEventListener('dragstart',e=>{
+      App.dragId=parseInt(card.dataset.id);
+      e.dataTransfer.effectAllowed='move';
+      requestAnimationFrame(()=>card.style.opacity='.3');
+    });
+    card.addEventListener('dragend',()=>{
+      App.dragId=null; card.style.opacity='1';
+      document.querySelectorAll('.col').forEach(c=>c.classList.remove('drag-over'));
+    });
+  });
+  document.querySelectorAll('.col').forEach(col=>{
+    col.addEventListener('dragover',e=>{
+      e.preventDefault(); e.dataTransfer.dropEffect='move';
+      col.classList.add('drag-over');
+      const h=col.querySelector('.col-empty'); if(h) h.classList.add('hint');
+    });
+    col.addEventListener('dragleave',e=>{
+      if(!col.contains(e.relatedTarget)){
+        col.classList.remove('drag-over');
+        const h=col.querySelector('.col-empty'); if(h) h.classList.remove('hint');
+      }
+    });
+    col.addEventListener('drop',e=>{
+      e.preventDefault(); col.classList.remove('drag-over');
+      if(App.dragId){ Store.move(App.dragId,col.dataset.col); renderAll(); }
+    });
+  });
+}
+
+// ════════════════════════════════════════════
+// RENDER ALL
+// ════════════════════════════════════════════
+function renderSidebar() {
+  const views={dashboard:'Dashboard',pipeline:'Pipeline',leads:'Leads',analytics:'Analytics'};
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===App.view));
+  $('page-title').textContent=views[App.view]||'';
+  const active=Store.leads.filter(l=>!['Won','Lost'].includes(l.stage));
+  $('sb-footer').innerHTML=`
+    <div class="sb-stat-row"><span>Active Leads</span><strong>${active.length}</strong></div>
+    <div class="sb-stat-row"><span>Pipeline Value</span><strong>${fmt(active.reduce((s,l)=>s+l.value,0))}</strong></div>
+    <div class="sb-stat-row"><span>Total</span><strong>${Store.leads.length} leads</strong></div>`;
+}
+
+function renderFilters() {
+  const {q,stage,product}=App.filters;
+  $('btn-clear').style.display=(q||stage!=='All'||product!=='All')?'':'none';
+}
+
+function renderAll() {
+  renderSidebar(); renderFilters();
+  ({dashboard:renderDashboard,pipeline:renderPipeline,leads:renderLeads,analytics:renderAnalytics}[App.view]||renderDashboard)();
+  renderPanel();
+}
+
+// ════════════════════════════════════════════
+// EVENTS
+// ════════════════════════════════════════════
+function init() {
+  // Populate dropdowns
+  STAGES.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;$('filter-stage').append(o);});
+  PRODUCTS.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;$('filter-product').append(o);});
+
+  // Nav
+  document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>{App.view=n.dataset.view;renderAll();}));
+
+  // New lead
+  $('btn-new').addEventListener('click',()=>openModal('New Lead',{stage:'New Lead',product:PRODUCTS[0],source:SOURCES[0],size:SIZES[0]},d=>{Store.add(d);renderAll();}));
+
+  // Search / filters
+  let t; $('search-input').addEventListener('input',()=>{clearTimeout(t);t=setTimeout(renderAll,180);});
+  $('filter-stage').addEventListener('change',renderAll);
+  $('filter-product').addEventListener('change',renderAll);
+  $('btn-clear').addEventListener('click',()=>{$('search-input').value='';$('filter-stage').value='All';$('filter-product').value='All';renderAll();});
+
+  // Content delegation
+  $('content').addEventListener('click',e=>{
+    const action=e.target.closest('[data-action]');
+    const card=e.target.closest('[data-id]');
+    const goto=e.target.closest('[data-goto]');
+
+    if(action){
+      e.stopPropagation();
+      const id=parseInt(action.dataset.id);
+      if(action.dataset.action==='edit'){
+        const l=Store.find(id); if(!l) return;
+        openModal('Edit Lead',l,d=>{Store.update({...l,...d});if(App.selId===id)App.selId=id;renderAll();});
+      } else if(action.dataset.action==='delete'){
+        const l=Store.find(id); if(!l) return;
+        showConfirm(`Delete "${l.company}"? This cannot be undone.`,()=>{if(App.selId===id)App.selId=null;Store.del(id);renderAll();});
+      }
+      return;
+    }
+    if(goto){
+      App.selId=parseInt(goto.dataset.goto); App.view='leads'; renderAll(); return;
+    }
+    if(card&&card.dataset.id){
+      const id=parseInt(card.dataset.id);
+      App.selId=App.selId===id?null:id; renderAll();
+    }
+  });
+
+  // Panel delegation (click)
+  $('panel').addEventListener('click',e=>{
+    if(e.target.closest('[data-panel-close]')){ App.selId=null; renderAll(); return; }
+    const mv=e.target.closest('[data-move]');
+    if(mv&&App.selId){ Store.move(App.selId,mv.dataset.move); renderAll(); return; }
+    if(e.target.closest('[data-panel-edit]')&&App.sel){
+      const l=App.sel; openModal('Edit Lead',l,d=>{Store.update({...l,...d});renderAll();}); return;
+    }
+    if(e.target.closest('[data-panel-del]')&&App.sel){
+      const l=App.sel;
+      showConfirm(`Delete "${l.company}"? This cannot be undone.`,()=>{Store.del(App.selId);App.selId=null;renderAll();}); return;
+    }
+    if(e.target.closest('[data-add-act]')){
+      const txt=$('act-txt')?.value.trim(), type=$('act-type')?.value||'Note';
+      if(txt&&App.selId){ Store.addAct(App.selId,type,txt); renderAll(); }
+    }
+  });
+
+  // Panel Enter key for activity
+  $('panel').addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&e.target.id==='act-txt'){ e.preventDefault(); $('panel').querySelector('[data-add-act]')?.click(); }
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){
+      if($('modal-ov').classList.contains('open')){ $('modal-ov').classList.remove('open'); return; }
+      if($('cfm-ov').classList.contains('open')){ $('cfm-ov').classList.remove('open'); return; }
+      if(App.selId){ App.selId=null; renderAll(); }
+    }
+    if(e.key==='n'&&!e.ctrlKey&&!e.metaKey&&e.target.tagName==='BODY')
+      $('btn-new').click();
+  });
+}
+
+// ════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════
+Store.load();
+init();
+renderAll();
+</script>
+</body>
+</html>
