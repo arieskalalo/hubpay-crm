@@ -424,13 +424,13 @@ const Store = {
   leads: [], _nid: 20,
   load() {
     try {
-      const raw = localStorage.getItem('hp_crm_v3');
+      const raw = localStorage.getItem('hp_crm_v4');
       if (raw) { const d = JSON.parse(raw); this.leads = d.leads||[]; this._nid = d.nid||20; }
       else { this.leads = SEED.map(l=>({...l})); this._nid = 20; this._save(); }
     } catch { this.leads = SEED.map(l=>({...l})); this._nid = 20; }
   },
   _save() {
-    try { localStorage.setItem('hp_crm_v3', JSON.stringify({leads:this.leads,nid:this._nid})); } catch {}
+    try { localStorage.setItem('hp_crm_v4', JSON.stringify({leads:this.leads,nid:this._nid})); } catch {}
   },
   add(d) {
     const l = {...d, id:this._nid++, value:Number(d.value)||0,
