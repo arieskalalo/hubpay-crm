@@ -304,6 +304,16 @@ html, body { height: 100%; font-family: 'DM Sans', system-ui, sans-serif; font-s
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #D5D0C8; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #bbb; }
+
+/* ── TOAST ────────────────────────────────── */
+#toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(12px);
+  background: #1A1A1A; color: #fff; font-size: 12.5px; font-weight: 500;
+  padding: 10px 18px; border-radius: 8px; box-shadow: var(--shadow-lg);
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+  white-space: nowrap; z-index: 9999;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
@@ -406,6 +416,11 @@ html, body { height: 100%; font-family: 'DM Sans', system-ui, sans-serif; font-s
         <option value="All">All Products</option>
       </select>
       <button id="btn-clear" class="btn-clear" style="display:none">Clear</button>
+      <button id="btn-import" class="btn btn-secondary" title="Import leads from CSV file">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Import CSV
+      </button>
+      <input type="file" id="csv-file" accept=".csv" style="display:none">
       <button id="btn-new" class="btn btn-primary">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         New Lead
@@ -420,6 +435,9 @@ html, body { height: 100%; font-family: 'DM Sans', system-ui, sans-serif; font-s
 
 <!-- MODAL -->
 <div id="modal-ov"><div id="modal"></div></div>
+
+<!-- TOAST -->
+<div id="toast"></div>
 
 <!-- CONFIRM -->
 <div id="cfm-ov">
@@ -933,6 +951,87 @@ function renderAll() {
 }
 
 // ════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════
+let _toastTimer;
+function showToast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ════════════════════════════════════════════
+// CSV IMPORT
+// ════════════════════════════════════════════
+const CSV_MAP = {
+  company:['company','company name','organization','org'],
+  contact:['contact','contact name','full name','name','person'],
+  email:['email','email address','e-mail'],
+  phone:['phone','phone number','tel','telephone','mobile'],
+  stage:['stage','lead stage','status'],
+  value:['value','deal value','amount','revenue','arr'],
+  product:['product','product line','service'],
+  source:['source','lead source','channel'],
+  industry:['industry','sector','vertical'],
+  size:['size','company size','employees','headcount'],
+  notes:['notes','note','description','comments']
+};
+
+function parseCSV(text) {
+  const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
+  if (lines.length < 2) return [];
+  // Parse header row — handle quoted fields
+  const parseRow = row => {
+    const result = []; let cur = '', inQ = false;
+    for (let i = 0; i < row.length; i++) {
+      const c = row[i];
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+      else { cur += c; }
+    }
+    result.push(cur.trim()); return result;
+  };
+  const headers = parseRow(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim());
+  // Map each header to a schema field
+  const colMap = headers.map(h => {
+    for (const [field, aliases] of Object.entries(CSV_MAP)) {
+      if (aliases.includes(h)) return field;
+    }
+    return null;
+  });
+  const leads = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const vals = parseRow(lines[i]);
+    const obj = {};
+    colMap.forEach((field, idx) => { if (field) obj[field] = (vals[idx]||'').trim(); });
+    if (!obj.company) continue; // skip rows without a company name
+    // Apply defaults for missing fields
+    if (!obj.stage || !STAGES.includes(obj.stage)) obj.stage = 'New Lead';
+    if (!obj.product || !PRODUCTS.includes(obj.product)) obj.product = PRODUCTS[0];
+    if (!obj.source || !SOURCES.includes(obj.source)) obj.source = 'Cold Outreach';
+    if (!obj.size || !SIZES.includes(obj.size)) obj.size = '1-10';
+    obj.value = Number(obj.value) || 0;
+    leads.push(obj);
+  }
+  return leads;
+}
+
+function importLeads(rows) {
+  const existing = new Set(Store.leads.map(l => l.company.toLowerCase().trim()));
+  let imported = 0, skipped = 0;
+  rows.forEach(row => {
+    if (existing.has(row.company.toLowerCase().trim())) { skipped++; return; }
+    Store.add(row);
+    existing.add(row.company.toLowerCase().trim());
+    imported++;
+  });
+  return { imported, skipped };
+}
+
+// ════════════════════════════════════════════
 // EVENTS
 // ════════════════════════════════════════════
 function init() {
@@ -942,6 +1041,24 @@ function init() {
 
   // Nav
   document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>{App.view=n.dataset.view;renderAll();}));
+
+  // Import CSV
+  $('btn-import').addEventListener('click', () => $('csv-file').click());
+  $('csv-file').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const rows = parseCSV(ev.target.result);
+      if (!rows.length) { showToast('No valid leads found in CSV'); return; }
+      showConfirm(`Import ${rows.length} lead${rows.length!==1?'s':''}?`, () => {
+        const { imported, skipped } = importLeads(rows);
+        renderAll();
+        showToast(`Imported ${imported} lead${imported!==1?'s':''}${skipped ? `, skipped ${skipped} duplicate${skipped!==1?'s':''}` : ''}`);
+      });
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
 
   // New lead
   $('btn-new').addEventListener('click',()=>openModal('New Lead',{stage:'New Lead',product:PRODUCTS[0],source:SOURCES[0],size:SIZES[0]},d=>{Store.add(d);renderAll();}));
