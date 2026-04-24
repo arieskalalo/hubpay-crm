@@ -1,0 +1,13 @@
+services:
+  - type: cron
+    name: prospera-scraper
+    env: node
+    schedule: "0 6 * * *"
+    buildCommand: npm install
+    startCommand: node src/index.js
+    rootDir: scraper
+    envVars:
+      - key: SUPABASE_URL
+        value: https://flpwzwctvtjoagqesyta.supabase.co
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
