@@ -1,0 +1,30 @@
+name: Cleanup Irrelevant Leads
+
+on:
+  workflow_dispatch:   # manual trigger only — run once from GitHub Actions tab
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: scraper
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: scraper/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Delete irrelevant leads
+        run: node cleanup.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
