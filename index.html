@@ -331,6 +331,15 @@ html, body { height: 100%; font-family: 'DM Sans', system-ui, sans-serif; font-s
 .report-card-foot { padding: 14px 20px; border-top: 1px solid var(--border-lt); display: flex; gap: 8px; }
 .report-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; flex-shrink: 0; }
 
+/* ── COLUMN PICKER ────────────────────────── */
+#cp-ov { position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;z-index:150;opacity:0;pointer-events:none;transition:opacity .18s; }
+#cp-ov.open { opacity:1;pointer-events:all; }
+#cp { background:var(--surface);border-radius:13px;width:370px;max-height:82vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);transform:translateY(10px);transition:transform .18s; }
+#cp-ov.open #cp { transform:translateY(0); }
+.cp-col-item { display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:6px;cursor:pointer;transition:background .1s;font-size:12.5px;user-select:none; }
+.cp-col-item:hover { background:var(--bg); }
+.cp-col-item input[type="checkbox"] { width:15px;height:15px;accent-color:var(--primary);cursor:pointer;flex-shrink:0; }
+
 /* ── SIGN-IN GATE ─────────────────────────── */
 #signin-gate { position:fixed;inset:0;background:linear-gradient(135deg,#09302C 0%,#0C7A6E 100%);display:none;align-items:center;justify-content:center;z-index:9999; }
 .si-box { background:#fff;border-radius:16px;padding:36px 40px;width:340px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center; }
@@ -444,6 +453,31 @@ html, body { height: 100%; font-family: 'DM Sans', system-ui, sans-serif; font-s
 <!-- TOAST -->
 <div id="toast"></div>
 
+<!-- COLUMN PICKER -->
+<div id="cp-ov">
+  <div id="cp">
+    <div style="padding:18px 22px 14px;border-bottom:1px solid var(--border-lt);display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+      <div>
+        <div style="font-size:15px;font-weight:700" id="cp-title"></div>
+        <div style="font-size:11px;color:var(--t3);margin-top:2px">Choose columns to include</div>
+      </div>
+      <button class="m-close" id="cp-close">&times;</button>
+    </div>
+    <div style="padding:8px 12px;border-bottom:1px solid var(--border-lt);display:flex;gap:6px;flex-shrink:0">
+      <button id="cp-sel-all" class="btn btn-secondary btn-sm">Select All</button>
+      <button id="cp-sel-none" class="btn btn-secondary btn-sm">Deselect All</button>
+    </div>
+    <div id="cp-cols" style="overflow-y:auto;padding:8px 12px;flex:1;display:flex;flex-direction:column;gap:2px"></div>
+    <div style="padding:14px 22px;border-top:1px solid var(--border-lt);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0">
+      <button class="btn btn-secondary" id="cp-cancel">Cancel</button>
+      <button class="btn btn-primary" id="cp-download">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download Excel
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- CONFIRM -->
 <div id="cfm-ov">
   <div id="cfm">
@@ -493,20 +527,25 @@ const $     = id => document.getElementById(id);
 const badge = (txt,clr) => `<span class="badge" style="color:${clr};background:${clr}1A">${esc(txt)}</span>`;
 
 // ════════════════════════════════════════════
-// CSV EXPORT
+// EXCEL EXPORT
 // ════════════════════════════════════════════
-function generateCSV(headers, rows) {
-  const enc = v => {
-    const s = String(v == null ? '' : v);
-    return (s.includes(',') || s.includes('"') || s.includes('\n')) ? `"${s.replace(/"/g,'""')}"` : s;
-  };
-  return '\uFEFF' + [headers, ...rows].map(r => r.map(enc).join(',')).join('\r\n');
-}
-function downloadCSV(filename, csv) {
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+function downloadExcel(filename, color, headers, rows) {
+  const x = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const hdrCells = headers.map(h =>
+    `<th style="background-color:${color};color:#fff;font-weight:bold;padding:9px 14px;border:1px solid ${color};font-size:13px;font-family:Arial,sans-serif;white-space:nowrap">${x(h)}</th>`
+  ).join('');
+  const bodyRows = rows.map((row, i) => {
+    const bg = i % 2 === 0 ? '#ffffff' : '#F5F4F0';
+    const cells = row.map(v =>
+      `<td style="padding:7px 14px;border:1px solid #E8E3DA;background-color:${bg};font-size:12px;font-family:Arial,sans-serif;vertical-align:top">${x(v)}</td>`
+    ).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Report</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table border="0" cellspacing="0" cellpadding="0" style="border-collapse:collapse"><thead><tr>${hdrCells}</tr></thead><tbody>${bodyRows}</tbody></table></body></html>`;
+  const blob = new Blob(['\uFEFF' + html], {type:'application/vnd.ms-excel;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = filename; a.style.display = 'none';
+  a.href = url; a.download = filename + '.xls'; a.style.display = 'none';
   document.body.appendChild(a); a.click();
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
 }
@@ -945,7 +984,7 @@ function renderReports() {
         <div class="report-card-foot">
           <button class="btn btn-primary btn-sm" style="flex:1" data-dl="${r.id}">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download CSV
+            Download
           </button>
         </div>
       </div>`;
@@ -954,19 +993,43 @@ function renderReports() {
   $('content').innerHTML = `
     <div style="margin-bottom:20px">
       <div style="font-size:15px;font-weight:700;margin-bottom:4px">Reports</div>
-      <div style="font-size:12px;color:var(--t2)">Download your CRM data as CSV files — open in Excel, Google Sheets, or any spreadsheet app.</div>
+      <div style="font-size:12px;color:var(--t2)">Export CRM data to Excel. Choose which columns to include before downloading.</div>
     </div>
     <div class="reports-grid">${cards}</div>`;
 
   $('content').querySelectorAll('[data-dl]').forEach(btn => {
     btn.addEventListener('click', () => {
       const r = REPORTS.find(x => x.id === btn.dataset.dl);
-      if (!r) return;
-      const csv = generateCSV(r.headers, r.rows());
-      downloadCSV(`prospera-${r.id}-${today()}.csv`, csv);
-      showToast(`Downloading ${r.title}…`);
+      if (r) openColPicker(r);
     });
   });
+}
+
+function openColPicker(r) {
+  const ov = $('cp-ov');
+  $('cp-title').textContent = r.title;
+  const colList = $('cp-cols');
+  colList.innerHTML = r.headers.map((h, i) => `
+    <label class="cp-col-item">
+      <input type="checkbox" class="cp-check" data-idx="${i}" checked>
+      <span>${esc(h)}</span>
+    </label>`).join('');
+  ov.classList.add('open');
+  const close = () => ov.classList.remove('open');
+  $('cp-close').onclick = close;
+  $('cp-cancel').onclick = close;
+  ov.onclick = e => { if (e.target === ov) close(); };
+  $('cp-sel-all').onclick = () => colList.querySelectorAll('.cp-check').forEach(c => c.checked = true);
+  $('cp-sel-none').onclick = () => colList.querySelectorAll('.cp-check').forEach(c => c.checked = false);
+  $('cp-download').onclick = () => {
+    const picked = [...colList.querySelectorAll('.cp-check')].filter(c => c.checked).map(c => parseInt(c.dataset.idx));
+    if (!picked.length) { showToast('Select at least one column'); return; }
+    const hdrs = picked.map(i => r.headers[i]);
+    const rows = r.rows().map(row => picked.map(i => row[i]));
+    close();
+    downloadExcel(`prospera-${r.id}-${today()}`, r.color, hdrs, rows);
+    showToast(`Downloading ${r.title}…`);
+  };
 }
 
 // ════════════════════════════════════════════
