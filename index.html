@@ -505,6 +505,9 @@ html, body { height: 100%; font-family: 'DM Sans', system-ui, sans-serif; font-s
 
 <script>
 'use strict';
+// Capture URL hash type BEFORE Supabase clears it (invite / recovery links)
+const _urlParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+const _linkType = _urlParams.get('type'); // 'invite' | 'recovery' | null
 // ════════════════════════════════════════════
 // CONSTANTS
 // ════════════════════════════════════════════
@@ -1543,7 +1546,7 @@ async function bootApp() {
 
 // Handle password recovery / invite links (fires when user clicks email link)
 db.auth.onAuthStateChange(async (event) => {
-  if (event === 'PASSWORD_RECOVERY') {
+  if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && _linkType === 'invite')) {
     const ov=$('modal-ov'), m=$('modal');
     m.innerHTML=`
       <div class="m-hd"><span class="m-title">Set Your Password</span></div>
@@ -1570,6 +1573,8 @@ db.auth.onAuthStateChange(async (event) => {
 });
 
 (async () => {
+  // If arriving from an invite or reset link, let onAuthStateChange handle it
+  if (_linkType === 'invite' || _linkType === 'recovery') return;
   const { data: { session } } = await db.auth.getSession();
   if (session) {
     await bootApp();
